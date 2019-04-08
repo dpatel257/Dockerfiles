@@ -540,7 +540,7 @@ RUN cd /home/FFmpeg && \
 
 
 FROM ubuntu:16.04
-LABEL Description="This is the base image for developing FFMPEG and GStreamer applications based on Ubuntu 16.04 LTS"
+LABEL Description="This is the base image for developing FFMPEG, GStreamer and DLDT applications based on Ubuntu 16.04 LTS"
 LABEL Vendor="Intel Corporation"
 WORKDIR /home
 

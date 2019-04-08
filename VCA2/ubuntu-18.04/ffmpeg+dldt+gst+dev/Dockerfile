@@ -551,7 +551,7 @@ RUN cd /home/FFmpeg && \
 
 
 FROM ubuntu:18.04
-LABEL Description="This is the image for FFMPEG & GSTREAMER application development on Ubuntu 18.04"
+LABEL Description="This is the image for FFMPEG, GSTREAMER and DLDT application development on Ubuntu 18.04"
 LABEL Vendor="Intel Corporation"
 WORKDIR /home
 

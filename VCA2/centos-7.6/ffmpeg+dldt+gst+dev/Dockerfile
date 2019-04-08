@@ -566,7 +566,7 @@ RUN cd /home/FFmpeg && \
 
 
 FROM centos:7.6.1810
-LABEL Description="This is the image for FFMPEG and GSTREAMER application development on CentOS 7.6"
+LABEL Description="This is the image for FFMPEG, GSTREAMER and DLDTapplication development on CentOS 7.6"
 LABEL Vendor="Intel Corporation"
 WORKDIR /home
 
