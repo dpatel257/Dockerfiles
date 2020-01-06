@@ -1,5 +1,5 @@
 ifelse(index(DOCKER_IMAGE,ubuntu),-1,,
-    RUN apt-get install -y -q --no-install-recommends gtk-doc-tools uuid-dev
+    RUN apt-get install -y -q --no-install-recommends gtk-doc-tools uuid-dev python-gi-dev python3-dev libtool-bin
 )dnl
 
 ifelse(index(DOCKER_IMAGE,centos),-1,,
@@ -66,13 +66,15 @@ RUN if [ "$RDKAFKA_INSTALL" = "true" ] ; then \
 
 
 #Install va gstreamer plugins
-#Has a dependency on OpenCV, GStreamer
-ARG VA_GSTREAMER_PLUGINS_VER=0.6.1
-ARG VA_GSTREAMER_PLUGINS_REPO=https://github.com/opencv/gst-video-analytics/archive/v${VA_GSTREAMER_PLUGINS_VER}.tar.gz
 
-RUN wget -O - ${VA_GSTREAMER_PLUGINS_REPO} | tar xz && \
-    cd gst-video-analytics-${VA_GSTREAMER_PLUGINS_VER} && \
-    export PKG_CONFIG_PATH="/usr/local/ifelse(index(DOCKER_IMAGE,ubuntu),-1,lib64,lib/x86_64-linux-gnu)/pkgconfig" && \
+ARG VA_GSTREAMER_PLUGINS_VER=e2813c8af5 
+# preview branch with python api yolov3 support
+ARG VA_GSTREAMER_PLUGINS_REPO=https://github.com/opencv/gst-video-analytics
+
+RUN git clone ${VA_GSTREAMER_PLUGINS_REPO} && \
+    cd gst-video-analytics && \
+    git checkout ${VA_GSTREAMER_PLUGINS_VER} && \
+    git submodule init && git submodule update && \
     mkdir build && \
     cd build && \
     export CFLAGS="-std=gnu99 -Wno-missing-field-initializers" && \
@@ -84,20 +86,41 @@ RUN wget -O - ${VA_GSTREAMER_PLUGINS_REPO} | tar xz && \
     -DDISABLE_SAMPLES=ON \
     -DENABLE_PAHO_INSTALLATION=1 \
     -DENABLE_RDKAFKA_INSTALLATION=1 \
-    -DDISABLE_VAAPI=ON ifelse(index(DOCKER_IMAGE,vcaca),-1,,-DENABLE_AVX2=ON -DENABLE_SSE42=ON) \
+    ifelse(index(DOCKER_IMAGE,vcaca),-1,-DHAVE_VAAPI=OFF ,-DHAVE_VAAPI=ON -DENABLE_AVX2=ON -DENABLE_SSE42=ON) \
     -DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX=/usr/local .. && \
     make -j4
 RUN mkdir -p build/usr/local/ifelse(index(DOCKER_IMAGE,ubuntu),-1,lib64,lib/x86_64-linux-gnu)/gstreamer-1.0 && \
-    cp -r gst-video-analytics-${VA_GSTREAMER_PLUGINS_VER}/build/intel64/Release/lib/* build/usr/local/ifelse(index(DOCKER_IMAGE,ubuntu),-1,lib64,lib/x86_64-linux-gnu)/gstreamer-1.0
+    cp -r gst-video-analytics/build/intel64/Release/lib/* build/usr/local/ifelse(index(DOCKER_IMAGE,ubuntu),-1,lib64,lib/x86_64-linux-gnu)/gstreamer-1.0
 RUN mkdir -p /usr/local/ifelse(index(DOCKER_IMAGE,ubuntu),-1,lib64,lib/x86_64-linux-gnu)/gstreamer-1.0 && \
-    cp -r gst-video-analytics-${VA_GSTREAMER_PLUGINS_VER}/build/intel64/Release/lib/* /usr/local/ifelse(index(DOCKER_IMAGE,ubuntu),-1,lib64,lib/x86_64-linux-gnu)/gstreamer-1.0
+    cp -r gst-video-analytics/build/intel64/Release/lib/* /usr/local/ifelse(index(DOCKER_IMAGE,ubuntu),-1,lib64,lib/x86_64-linux-gnu)/gstreamer-1.0
+RUN mkdir -p build/usr/local/ifelse(index(DOCKER_IMAGE,ubuntu),-1,lib64,lib/x86_64-linux-gnu)/gstreamer-1.0/python && \
+    cp -r gst-video-analytics/python/gvapython.py build/usr/local/ifelse(index(DOCKER_IMAGE,ubuntu),-1,lib64,lib/x86_64-linux-gnu)/gstreamer-1.0/python
+RUN mkdir -p /usr/local/ifelse(index(DOCKER_IMAGE,ubuntu),-1,lib64,lib/x86_64-linux-gnu)/gstreamer-1.0/python && \
+    cp -r gst-video-analytics/python/gvapython.py /usr/local/ifelse(index(DOCKER_IMAGE,ubuntu),-1,lib64,lib/x86_64-linux-gnu)/gstreamer-1.0/python
+RUN mkdir -p build/usr/lib/python3.6/gstgva && \
+    cp -r gst-video-analytics/python/gstgva/* build/usr/lib/python3.6/gstgva
+RUN mkdir -p /usr/lib/python3.6/gstgva && \
+    cp -r gst-video-analytics/python/gstgva/* /usr/lib/python3.6/gstgva
+
+# Build gstreamer python
+ARG GST_VER=1.16.0
+ARG GST_PYTHON_REPO=https://gstreamer.freedesktop.org/src/gst-python/gst-python-${GST_VER}.tar.xz
+RUN ls -l
+RUN wget -O - ${GST_PYTHON_REPO} | tar xJ && \
+    cd gst-python-${GST_VER} && \
+    ./autogen.sh --prefix=/usr/local --libdir=/usr/local/ifelse(index(DOCKER_IMAGE,ubuntu),-1,lib64,lib/x86_64-linux-gnu) --libexecdir=/usr/local/ifelse(index(DOCKER_IMAGE,ubuntu),-1,lib64,lib/x86_64-linux-gnu) --with-pygi-overrides-dir=/usr/lib/python3/dist-packages/gi/overrides --disable-dependency-tracking --disable-silent-rules --with-libpython-dir="/usr/ifelse(index(DOCKER_IMAGE,ubuntu),-1,lib64,lib/x86_64-linux-gnu)" PYTHON=/usr/bin/python3 && \
+    make -j $(nproc) && \
+    make install && \
+    make install DESTDIR=/home/build
+
+RUN apt-get install -y python3-numpy python3-gi python3-gi-cairo python3-dev
 
 define(`INSTALL_PKGS_VA_GST_PLUGINS',
 ifelse(index(DOCKER_IMAGE,ubuntu1604),-1,,
     libgtk2.0 libdrm2 libxv1 uuid \
 )dnl
 ifelse(index(DOCKER_IMAGE,ubuntu1804),-1,,
-    libgtk2.0 libdrm2 libxv1 libpugixml1v5 uuid \
+    libgtk2.0 libdrm2 libxv1 libpugixml1v5 uuid python3-numpy python3-gi python3-gi-cairo python3-dev \
 )dnl
 ifelse(index(DOCKER_IMAGE,centos),-1,,
     openblas-serial uuid \

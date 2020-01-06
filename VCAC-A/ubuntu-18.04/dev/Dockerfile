@@ -505,7 +505,7 @@ RUN wget ${OPENCV_REPO} && \
     make install DESTDIR=/home/build && \
     make install
 
-RUN apt-get install -y -q --no-install-recommends gtk-doc-tools uuid-dev
+RUN apt-get install -y -q --no-install-recommends gtk-doc-tools uuid-dev python-gi-dev python3-dev libtool-bin
 
 
 
@@ -565,13 +565,15 @@ RUN if [ "$RDKAFKA_INSTALL" = "true" ] ; then \
 
 
 #Install va gstreamer plugins
-#Has a dependency on OpenCV, GStreamer
-ARG VA_GSTREAMER_PLUGINS_VER=0.6.1
-ARG VA_GSTREAMER_PLUGINS_REPO=https://github.com/opencv/gst-video-analytics/archive/v${VA_GSTREAMER_PLUGINS_VER}.tar.gz
 
-RUN wget -O - ${VA_GSTREAMER_PLUGINS_REPO} | tar xz && \
-    cd gst-video-analytics-${VA_GSTREAMER_PLUGINS_VER} && \
-    export PKG_CONFIG_PATH="/usr/local/lib/x86_64-linux-gnu/pkgconfig" && \
+ARG VA_GSTREAMER_PLUGINS_VER=e2813c8af5 
+# preview branch with python api yolov3 support
+ARG VA_GSTREAMER_PLUGINS_REPO=https://github.com/opencv/gst-video-analytics
+
+RUN git clone ${VA_GSTREAMER_PLUGINS_REPO} && \
+    cd gst-video-analytics && \
+    git checkout ${VA_GSTREAMER_PLUGINS_VER} && \
+    git submodule init && git submodule update && \
     mkdir build && \
     cd build && \
     export CFLAGS="-std=gnu99 -Wno-missing-field-initializers" && \
@@ -583,13 +585,34 @@ RUN wget -O - ${VA_GSTREAMER_PLUGINS_REPO} | tar xz && \
     -DDISABLE_SAMPLES=ON \
     -DENABLE_PAHO_INSTALLATION=1 \
     -DENABLE_RDKAFKA_INSTALLATION=1 \
-    -DDISABLE_VAAPI=ON -DENABLE_AVX2=ON -DENABLE_SSE42=ON \
+    -DHAVE_VAAPI=ON -DENABLE_AVX2=ON -DENABLE_SSE42=ON \
     -DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX=/usr/local .. && \
     make -j4
 RUN mkdir -p build/usr/local/lib/x86_64-linux-gnu/gstreamer-1.0 && \
-    cp -r gst-video-analytics-${VA_GSTREAMER_PLUGINS_VER}/build/intel64/Release/lib/* build/usr/local/lib/x86_64-linux-gnu/gstreamer-1.0
+    cp -r gst-video-analytics/build/intel64/Release/lib/* build/usr/local/lib/x86_64-linux-gnu/gstreamer-1.0
 RUN mkdir -p /usr/local/lib/x86_64-linux-gnu/gstreamer-1.0 && \
-    cp -r gst-video-analytics-${VA_GSTREAMER_PLUGINS_VER}/build/intel64/Release/lib/* /usr/local/lib/x86_64-linux-gnu/gstreamer-1.0
+    cp -r gst-video-analytics/build/intel64/Release/lib/* /usr/local/lib/x86_64-linux-gnu/gstreamer-1.0
+RUN mkdir -p build/usr/local/lib/x86_64-linux-gnu/gstreamer-1.0/python && \
+    cp -r gst-video-analytics/python/gvapython.py build/usr/local/lib/x86_64-linux-gnu/gstreamer-1.0/python
+RUN mkdir -p /usr/local/lib/x86_64-linux-gnu/gstreamer-1.0/python && \
+    cp -r gst-video-analytics/python/gvapython.py /usr/local/lib/x86_64-linux-gnu/gstreamer-1.0/python
+RUN mkdir -p build/usr/lib/python3.6/gstgva && \
+    cp -r gst-video-analytics/python/gstgva/* build/usr/lib/python3.6/gstgva
+RUN mkdir -p /usr/lib/python3.6/gstgva && \
+    cp -r gst-video-analytics/python/gstgva/* /usr/lib/python3.6/gstgva
+
+# Build gstreamer python
+ARG GST_VER=1.16.0
+ARG GST_PYTHON_REPO=https://gstreamer.freedesktop.org/src/gst-python/gst-python-${GST_VER}.tar.xz
+RUN ls -l
+RUN wget -O - ${GST_PYTHON_REPO} | tar xJ && \
+    cd gst-python-${GST_VER} && \
+    ./autogen.sh --prefix=/usr/local --libdir=/usr/local/lib/x86_64-linux-gnu --libexecdir=/usr/local/lib/x86_64-linux-gnu --with-pygi-overrides-dir=/usr/lib/python3/dist-packages/gi/overrides --disable-dependency-tracking --disable-silent-rules --with-libpython-dir="/usr/lib/x86_64-linux-gnu" PYTHON=/usr/bin/python3 && \
+    make -j $(nproc) && \
+    make install && \
+    make install DESTDIR=/home/build
+
+RUN apt-get install -y python3-numpy python3-gi python3-gi-cairo python3-dev
 
 
 
@@ -634,7 +657,7 @@ WORKDIR /home
 
 # Prerequisites
 RUN ln -sf /usr/share/zoneinfo/UTC /etc/localtime && \
-    DEBIAN_FRONTEND=noninteractive apt-get update && apt-get install -y -q --no-install-recommends  libxv1 libxcb-shm0 libxcb-shape0 libxcb-xfixes0 libsdl2-2.0-0 libasound2 libvdpau1 libnuma1 libass9 libssl1.1 libpciaccess0   libglib2.0 libpango-1.0-0 libpangocairo-1.0-0 gobject-introspection libcurl3-gnutls libdrm-intel1 libudev1 libx11-xcb1 libgl1-mesa-glx libxrandr2 libglib2.0-0 libpng16-16 libxv1 libvisual-0.4-0 libgl1-mesa-glx libegl1-mesa libpango-1.0-0 libtheora0 libcdparanoia0 libasound2 libsoup2.4-1 libjpeg8 libjpeg-turbo8 python3 python3-pip python3-setuptools python3-yaml libgtk2.0 libdrm2 libxv1 libpugixml1v5 uuid \
+    DEBIAN_FRONTEND=noninteractive apt-get update && apt-get install -y -q --no-install-recommends  libxv1 libxcb-shm0 libxcb-shape0 libxcb-xfixes0 libsdl2-2.0-0 libasound2 libvdpau1 libnuma1 libass9 libssl1.1 libpciaccess0   libglib2.0 libpango-1.0-0 libpangocairo-1.0-0 gobject-introspection libcurl3-gnutls libdrm-intel1 libudev1 libx11-xcb1 libgl1-mesa-glx libxrandr2 libglib2.0-0 libpng16-16 libxv1 libvisual-0.4-0 libgl1-mesa-glx libegl1-mesa libpango-1.0-0 libtheora0 libcdparanoia0 libasound2 libsoup2.4-1 libjpeg8 libjpeg-turbo8 python3 python3-pip python3-setuptools python3-yaml libgtk2.0 libdrm2 libxv1 libpugixml1v5 uuid python3-numpy python3-gi python3-gi-cairo python3-dev \
 libdrm2  libjson-c3 libboost-filesystem1.65.1 libboost-system1.65.1 libusb-1.0-0-dev vim && \
     rm -rf /var/lib/apt/lists/*
 
