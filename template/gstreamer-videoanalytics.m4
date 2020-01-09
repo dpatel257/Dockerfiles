@@ -7,9 +7,12 @@ ifelse(index(DOCKER_IMAGE,centos),-1,,
 )dnl
 
 ifelse(index(DOCKER_IMAGE,centos74),-1,,
-    RUN yum install -y -q binutils uuid-devel
+    RUN yum install -y -q binutils uuid-devel python3 python36-gobject-devel python3-devel
 )dnl
 
+ifelse(index(DOCKER_IMAGE,centos75),-1,,
+    RUN yum install -y -q binutils uuid-devel python3 python36-gobject-devel python3-devel
+)dnl
 
 ARG PAHO_INSTALL=true
 ARG PAHO_VER=1.3.0
@@ -97,10 +100,21 @@ RUN mkdir -p build/usr/local/ifelse(index(DOCKER_IMAGE,ubuntu),-1,lib64,lib/x86_
     cp -r gst-video-analytics/python/gvapython.py build/usr/local/ifelse(index(DOCKER_IMAGE,ubuntu),-1,lib64,lib/x86_64-linux-gnu)/gstreamer-1.0/python
 RUN mkdir -p /usr/local/ifelse(index(DOCKER_IMAGE,ubuntu),-1,lib64,lib/x86_64-linux-gnu)/gstreamer-1.0/python && \
     cp -r gst-video-analytics/python/gvapython.py /usr/local/ifelse(index(DOCKER_IMAGE,ubuntu),-1,lib64,lib/x86_64-linux-gnu)/gstreamer-1.0/python
+ifelse(index(DOCKER_IMAGE,ubuntu1804),-1,,
+# Ubuntu1804
 RUN mkdir -p build/usr/lib/python3.6/gstgva && \
     cp -r gst-video-analytics/python/gstgva/* build/usr/lib/python3.6/gstgva
 RUN mkdir -p /usr/lib/python3.6/gstgva && \
     cp -r gst-video-analytics/python/gstgva/* /usr/lib/python3.6/gstgva
+)dnl
+
+ifelse(index(DOCKER_IMAGE,ubuntu1604),-1,,
+# Ubuntu1604
+RUN mkdir -p build/usr/lib/python3.5/gstgva && \
+    cp -r gst-video-analytics/python/gstgva/* build/usr/lib/python3.5/gstgva
+RUN mkdir -p /usr/lib/python3.5/gstgva && \
+    cp -r gst-video-analytics/python/gstgva/* /usr/lib/python3.5/gstgva
+)dnl
 
 # Build gstreamer python
 ARG GST_VER=1.16.0
@@ -108,22 +122,25 @@ ARG GST_PYTHON_REPO=https://gstreamer.freedesktop.org/src/gst-python/gst-python-
 RUN ls -l
 RUN wget -O - ${GST_PYTHON_REPO} | tar xJ && \
     cd gst-python-${GST_VER} && \
-    ./autogen.sh --prefix=/usr/local --libdir=/usr/local/ifelse(index(DOCKER_IMAGE,ubuntu),-1,lib64,lib/x86_64-linux-gnu) --libexecdir=/usr/local/ifelse(index(DOCKER_IMAGE,ubuntu),-1,lib64,lib/x86_64-linux-gnu) --with-pygi-overrides-dir=/usr/lib/python3/dist-packages/gi/overrides --disable-dependency-tracking --disable-silent-rules --with-libpython-dir="/usr/ifelse(index(DOCKER_IMAGE,ubuntu),-1,lib64,lib/x86_64-linux-gnu)" PYTHON=/usr/bin/python3 && \
+    ./autogen.sh --prefix=/usr/local --libdir=/usr/local/ifelse(index(DOCKER_IMAGE,ubuntu),-1,lib64,lib/x86_64-linux-gnu) --libexecdir=/usr/local/ifelse(index(DOCKER_IMAGE,ubuntu),-1,lib64,lib/x86_64-linux-gnu) --with-pygi-overrides-dir=/usr/ifelse(index(DOCKER_IMAGE,ubuntu),-1,lib64/python3.6/site-packages,lib/python3/dist-packages)/gi/overrides --disable-dependency-tracking --disable-silent-rules --with-libpython-dir="/usr/ifelse(index(DOCKER_IMAGE,ubuntu),-1,lib64/,lib/x86_64-linux-gnu/)" PYTHON=/usr/bin/python3 && \
     make -j $(nproc) && \
     make install && \
     make install DESTDIR=/home/build
 
-RUN apt-get install -y python3-numpy python3-gi python3-gi-cairo python3-dev
+ifelse(index(DOCKER_IMAGE,ubuntu),-1,,
+ENV GI_TYPELIB_PATH=${GI_TYPELIB_PATH}:/usr/local/lib/x86_64-linux-gnu/girepository-1.0/
+)dnl
+
 
 define(`INSTALL_PKGS_VA_GST_PLUGINS',
 ifelse(index(DOCKER_IMAGE,ubuntu1604),-1,,
-    libgtk2.0 libdrm2 libxv1 uuid \
+    libgtk2.0 libdrm2 libxv1 uuid python3-numpy python3-gi python3-gi-cairo python3-dev \
 )dnl
 ifelse(index(DOCKER_IMAGE,ubuntu1804),-1,,
     libgtk2.0 libdrm2 libxv1 libpugixml1v5 uuid python3-numpy python3-gi python3-gi-cairo python3-dev \
 )dnl
 ifelse(index(DOCKER_IMAGE,centos),-1,,
-    openblas-serial uuid \
+    openblas-serial uuid python3 python36-gobject python3-devel python36-gobject-devel python36-gobject-base \
 )dnl
 )dnl
 
@@ -132,4 +149,8 @@ ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/ifelse(index(DOCKER_IMAGE,ubun
 ENV PKG_CONFIG_PATH=/usr/local/ifelse(index(DOCKER_IMAGE,ubuntu),-1,lib64,lib/x86_64-linux-gnu)/pkgconfig
 ENV LIBRARY_PATH=${LIBRARY_PATH}:/usr/local/lib:/usr/lib
 ENV PATH=${PATH}:/usr/local/bin:/usr/bin
+ifelse(index(DOCKER_IMAGE,ubuntu),-1,,
+ENV GI_TYPELIB_PATH=${GI_TYPELIB_PATH}:/usr/local/lib/x86_64-linux-gnu/girepository-1.0/
+)dnl
+
 )dnl

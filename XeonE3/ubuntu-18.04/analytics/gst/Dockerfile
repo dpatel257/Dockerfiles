@@ -675,10 +675,12 @@ RUN mkdir -p build/usr/local/lib/x86_64-linux-gnu/gstreamer-1.0/python && \
     cp -r gst-video-analytics/python/gvapython.py build/usr/local/lib/x86_64-linux-gnu/gstreamer-1.0/python
 RUN mkdir -p /usr/local/lib/x86_64-linux-gnu/gstreamer-1.0/python && \
     cp -r gst-video-analytics/python/gvapython.py /usr/local/lib/x86_64-linux-gnu/gstreamer-1.0/python
+# Ubuntu1804
 RUN mkdir -p build/usr/lib/python3.6/gstgva && \
     cp -r gst-video-analytics/python/gstgva/* build/usr/lib/python3.6/gstgva
 RUN mkdir -p /usr/lib/python3.6/gstgva && \
     cp -r gst-video-analytics/python/gstgva/* /usr/lib/python3.6/gstgva
+
 
 # Build gstreamer python
 ARG GST_VER=1.16.0
@@ -686,12 +688,13 @@ ARG GST_PYTHON_REPO=https://gstreamer.freedesktop.org/src/gst-python/gst-python-
 RUN ls -l
 RUN wget -O - ${GST_PYTHON_REPO} | tar xJ && \
     cd gst-python-${GST_VER} && \
-    ./autogen.sh --prefix=/usr/local --libdir=/usr/local/lib/x86_64-linux-gnu --libexecdir=/usr/local/lib/x86_64-linux-gnu --with-pygi-overrides-dir=/usr/lib/python3/dist-packages/gi/overrides --disable-dependency-tracking --disable-silent-rules --with-libpython-dir="/usr/lib/x86_64-linux-gnu" PYTHON=/usr/bin/python3 && \
+    ./autogen.sh --prefix=/usr/local --libdir=/usr/local/lib/x86_64-linux-gnu --libexecdir=/usr/local/lib/x86_64-linux-gnu --with-pygi-overrides-dir=/usr/lib/python3/dist-packages/gi/overrides --disable-dependency-tracking --disable-silent-rules --with-libpython-dir="/usr/lib/x86_64-linux-gnu/" PYTHON=/usr/bin/python3 && \
     make -j $(nproc) && \
     make install && \
     make install DESTDIR=/home/build
 
-RUN apt-get install -y python3-numpy python3-gi python3-gi-cairo python3-dev
+ENV GI_TYPELIB_PATH=${GI_TYPELIB_PATH}:/usr/local/lib/x86_64-linux-gnu/girepository-1.0/
+
 
 
 
@@ -733,4 +736,6 @@ ENV InferenceEngine_DIR=/opt/intel/dldt/inference-engine/shareENV LD_LIBRARY_PAT
 ENV PKG_CONFIG_PATH=/usr/local/lib/x86_64-linux-gnu/pkgconfig
 ENV LIBRARY_PATH=${LIBRARY_PATH}:/usr/local/lib:/usr/lib
 ENV PATH=${PATH}:/usr/local/bin:/usr/bin
+ENV GI_TYPELIB_PATH=${GI_TYPELIB_PATH}:/usr/local/lib/x86_64-linux-gnu/girepository-1.0/
+
 

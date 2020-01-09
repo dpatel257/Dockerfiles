@@ -769,10 +769,7 @@ RUN mkdir -p build/usr/local/lib64/gstreamer-1.0/python && \
     cp -r gst-video-analytics/python/gvapython.py build/usr/local/lib64/gstreamer-1.0/python
 RUN mkdir -p /usr/local/lib64/gstreamer-1.0/python && \
     cp -r gst-video-analytics/python/gvapython.py /usr/local/lib64/gstreamer-1.0/python
-RUN mkdir -p build/usr/lib/python3.6/gstgva && \
-    cp -r gst-video-analytics/python/gstgva/* build/usr/lib/python3.6/gstgva
-RUN mkdir -p /usr/lib/python3.6/gstgva && \
-    cp -r gst-video-analytics/python/gstgva/* /usr/lib/python3.6/gstgva
+
 
 # Build gstreamer python
 ARG GST_VER=1.16.0
@@ -780,12 +777,12 @@ ARG GST_PYTHON_REPO=https://gstreamer.freedesktop.org/src/gst-python/gst-python-
 RUN ls -l
 RUN wget -O - ${GST_PYTHON_REPO} | tar xJ && \
     cd gst-python-${GST_VER} && \
-    ./autogen.sh --prefix=/usr/local --libdir=/usr/local/lib64 --libexecdir=/usr/local/lib64 --with-pygi-overrides-dir=/usr/lib/python3/dist-packages/gi/overrides --disable-dependency-tracking --disable-silent-rules --with-libpython-dir="/usr/lib64" PYTHON=/usr/bin/python3 && \
+    ./autogen.sh --prefix=/usr/local --libdir=/usr/local/lib64 --libexecdir=/usr/local/lib64 --with-pygi-overrides-dir=/usr/lib64/python3.6/site-packages/gi/overrides --disable-dependency-tracking --disable-silent-rules --with-libpython-dir="/usr/lib64/" PYTHON=/usr/bin/python3 && \
     make -j $(nproc) && \
     make install && \
     make install DESTDIR=/home/build
 
-RUN apt-get install -y python3-numpy python3-gi python3-gi-cairo python3-dev
+
 
 
 
@@ -839,7 +836,7 @@ WORKDIR /home
 # Prerequisites
 RUN yum install -y epel-release;  \
     yum localinstall -y --nogpgcheck https://download1.rpmfusion.org/free/el/rpmfusion-free-release-7.noarch.rpm; \
-    yum install -y -q   libxcb SDL2 libass numactl libvdpau  glib2-2.56.1 pango gobject-introspection libxcb mesa-libGL libXrandr libpng12 libXv libvisual mesa-libGL pango glib2 alsa-lib cdparanoia libtheora libpciaccess libX11 openblas-serial uuid \
+    yum install -y -q   libxcb SDL2 libass numactl libvdpau  glib2-2.56.1 pango gobject-introspection libxcb mesa-libGL libXrandr libpng12 libXv libvisual mesa-libGL pango glib2 alsa-lib cdparanoia libtheora libpciaccess libX11 openblas-serial uuid python3 python36-gobject python3-devel python36-gobject-devel python36-gobject-base \
 mesa-dri-drivers mesa-libGL libdrm  libsoup libjpeg-turbo librtmp python-yaml ; \
     yum remove -y -q epel-release; \
     yum remove -y -q rpmfusion-free-release; \
@@ -865,4 +862,5 @@ ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/lib64/gstreamer-1.0
 ENV PKG_CONFIG_PATH=/usr/local/lib64/pkgconfig
 ENV LIBRARY_PATH=${LIBRARY_PATH}:/usr/local/lib:/usr/lib
 ENV PATH=${PATH}:/usr/local/bin:/usr/bin
+
 
